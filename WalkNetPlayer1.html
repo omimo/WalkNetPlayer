@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<!-- WebGl Mocap Player - V 0.2 
+By Omid Alemi
+ -->
+<html lang="en">
+
+<head>
+	<title>WalkNet Player</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	
+	<link rel="stylesheet" href="style/pace.css"></link>
+	<link rel="stylesheet" href="bower_components/material-design-lite/material.min.css">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+	<style>
+		#player {
+			2width: 60%;
+			2height: 600px;
+			display: flex;
+			align-items: stretch;
+			flex-direction: column;
+			padding: 4px;
+		}
+		
+		#sidebar {
+			align-content: flex-start;
+			align-items: flex-start;
+		}
+		
+		.mdl-slider__background-lower {
+			background: rgba(0,0,0,.26) !important;
+		}
+	</style>
+	
+	<script src="bower_components/pace/pace.min.js"></script>
+	<script src="bower_components/mathjs/dist/math.min.js"></script>
+	<script src="bower_components/jquery/dist/jquery.min.js"></script>
+	<script src="bower_components/three.js/build/three.min.js"></script>
+	<script src="bower_components/three.js/examples/js/controls/OrbitControls.js"></script>
+	<script src="bower_components/WebHamsters/src/hamsters.min.js"></script>
+	<script src="bower_components/material-design-lite/material.min.js"></script>
+
+
+
+	<script src="js/jsMocapGL.js"></script>
+	<script src="js/skeletonFactory.js"></script>
+</head>
+
+<body>
+	<script type="text/javascript">
+		var characters = [];
+		var playing = true;
+
+
+		$(window).on("resize", function(e) {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize($('#player').width(), window.innerHeight * 0.7);
+		});
+	</script>
+
+	<script>
+		var scene, camera, renderer;
+		var geometry, material, mesh;
+
+		$(document).ready(function() {
+			init();
+
+			animate();
+
+			$('#btnConnect').on("click", function(e) {
+
+				var url = 'ws://' + $('#txtServerIP')[0].value + ':' + $('#txtServerPort')[0].value;
+				c2.loadFromStream(url, function() {
+					scene.add(c2.skeleton);
+
+					var data = {
+						message: 'Connected to ' + url
+					};
+					document.querySelector('#notification').MaterialSnackbar.showSnackbar(data);
+				});
+			});
+		});
+
+
+
+		function set_the_scene() {
+			// Lights
+			var lights = [];
+			lights[0] = new THREE.PointLight(0xffffff, 1, 0);
+			lights[1] = new THREE.PointLight(0xffffff, 1, 0);
+			lights[2] = new THREE.PointLight(0xffffff, 1, 0);
+			lights[0].position.set(0, 500, 0);
+			lights[1].position.set(500, 500, 500);
+			lights[2].position.set(-500, 500, -500);
+
+			scene.add(lights[0]);
+			scene.add(lights[1]);
+			scene.add(lights[2]);
+
+			var ambientLight = new THREE.AmbientLight(0x000000);
+			scene.add(ambientLight);
+
+			// Grid
+			var size = 170,
+				step = 20;
+
+			var geometry = new THREE.PlaneGeometry(size * 2, size * 2);
+			var material = new THREE.MeshBasicMaterial({
+				color: 0x909090,
+				side: THREE.DoubleSide,
+				transparent: true,
+				opacity: 0.7
+			});
+			var plane = new THREE.Mesh(geometry, material);
+			plane.position.set(0, 0, 0);
+			plane.rotation.set(math.pi / 2, 0, 0);
+			scene.add(plane);
+
+			var geometry = new THREE.Geometry();
+			var material = new THREE.LineBasicMaterial({
+				color: 0x222222,
+				linewidth: 1.2
+			});
+			for (var i = -size; i <= size; i += step) {
+				geometry.vertices.push(new THREE.Vector3(-size, -0.04, i));
+				geometry.vertices.push(new THREE.Vector3(size, -0.04, i));
+				geometry.vertices.push(new THREE.Vector3(i, -0.04, -size));
+				geometry.vertices.push(new THREE.Vector3(i, -0.04, size));
+			}
+
+			var line = new THREE.LineSegments(geometry, material);
+			scene.add(line);
+		}
+
+		function set_the_scene2() {
+
+
+			var light = new THREE.HemisphereLight(0xffffff, 0x000000, 0.6);
+			light.position.set(-200, 400, -200);
+			scene.add(light);
+
+			var light2 = new THREE.HemisphereLight(0xffffff, 0x000000, 0.6);
+			light2.position.set(200, 400, 200);
+			scene.add(light2);
+
+
+
+
+			var texture = THREE.ImageUtils.loadTexture(
+				'style/checker.png'
+			);
+
+
+			texture.wrapS = THREE.RepeatWrapping;
+			texture.wrapT = THREE.RepeatWrapping;
+			texture.repeat = new THREE.Vector2(50, 50);
+			//texture.anisotropy = renderer.getMaxAnisotropy();
+
+			var material = new THREE.MeshPhongMaterial({
+				color: 0xffffff,
+				specular: 0xffffff,
+				shininess: 10,
+				shading: THREE.FlatShading,
+				map: texture
+			});
+
+			var geometry = new THREE.PlaneGeometry(5000, 5000);
+
+			var mesh = new THREE.Mesh(geometry, material);
+			mesh.rotation.x = -Math.PI / 2;
+			scene.add(mesh);
+		}
+
+		function set_the_scene3() {
+			var light = new THREE.HemisphereLight(0xffffff, 0x000000, 1);
+			light.position.set(0, 200, 0);
+			scene.add(light);
+
+			var ambientLight = new THREE.AmbientLight(0x000000);
+			scene.add(ambientLight);
+
+			var textureLoader = new THREE.TextureLoader();
+
+			var texture = textureLoader.load('textures/hardwood2_diffuse.jpg', function(tt) {
+				// var texture = textureLoader.load('style/brick_diffuse.jpg', function(tt) {
+				console.log(tt);
+			});
+
+			var textureBump = textureLoader.load('textures/hardwood2_bump.jpg', function(tt) {
+				// var texture = textureLoader.load('style/brick_diffuse.jpg', function(tt) {
+			});
+
+			// console.log(texture);
+
+			texture.wrapS = THREE.RepeatWrapping;
+			texture.wrapT = THREE.RepeatWrapping;
+			texture.repeat = new THREE.Vector2(10, 5);
+
+			textureBump.wrapS = THREE.RepeatWrapping;
+			textureBump.wrapT = THREE.RepeatWrapping;
+			textureBump.repeat = new THREE.Vector2(10, 5);
+
+
+			//texture.anisotropy = renderer.getMaxAnisotropy();
+
+			var material = new THREE.MeshPhongMaterial({
+				color: 0xffffff,
+				specular: 0xffffff,
+				shininess: 100,
+				// shading: THREE.FlatShading,
+				map: texture,
+				bumpMap: textureBump
+
+			});
+
+			// var geometry = new THREE.PlaneGeometry(400, 400);
+			var geometry = new THREE.CubeGeometry(400, 400, 5);
+
+			var mesh = new THREE.Mesh(geometry, material);
+			mesh.position.y = -2;
+			mesh.rotation.x = -Math.PI / 2;
+			scene.add(mesh);
+		}
+
+		function init() {
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 10, 4000);
+			camera.position.set(0, 80, 0);
+			camera.position.z = 350;
+			scene.add(camera);
+
+			set_the_scene();
+
+			axes = new THREE.AxisHelper(50);
+			//scene.add( axes );
+
+
+			c2 = new BVHCharacter("Gholi", jointmaterial, bonematerial, makeJointGeometry_Dode, makeBoneGeometry_Cylinder2);
+			c2.skelScale = 1.1;
+			c2.setOriginPosition(0, 38, 0);
+
+			characters.push(c2);
+
+
+			renderer = new THREE.WebGLRenderer();
+			// renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.setSize($('#player').width(), window.innerHeight * 0.7);
+			renderer.setClearColor(0xefefef, 1);
+			document.getElementById('player').appendChild(renderer.domElement);
+
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+		}
+
+		function animate() {
+			requestAnimationFrame(animate);
+
+			characters.forEach(function(c) {
+				if (1 && c.ready) {
+					if (c.playing) {
+						c.animIndex = c.animOffset + Math.floor((Date.now() - c.animStartTimeRef) / c.frameTime / 1000);
+
+						if (c.animIndex >= c.frameCount) {
+							c.playing = false;
+							console.log("Stopped");
+						}
+						c.animFrame(c.animIndex);
+
+
+						cx = c.jointMeshes[0].matrixWorld.elements[12];
+						cy = c.jointMeshes[0].matrixWorld.elements[13];
+						cz = c.jointMeshes[0].matrixWorld.elements[14];
+
+						camera.position.set(cx, cy + 20, cz + 200);
+						camera.lookAt(cx, cy - 120, cz - 20);
+					}
+				}
+			});
+
+			renderer.render(scene, camera);
+		}
+	</script>
+
+
+	<div class="mdl-grid">
+		<div id="player" class="mdl-cell mdl-cell--8-col mdl-color--white mdl-shadow--4dp">
+			Player
+		</div>
+
+		<div id="sidebar" class="mdl-grid mdl-cell mdl-cell--4-col mdl-grid--no-spacing">
+			<div id="controller" class="mdl-grid mdl-cell mdl-cell--4-col mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-desktop mdl-color--white mdl-shadow--4dp">
+
+				<div class='title'> Controller </div>
+				
+				<button id="btnStart" class="mdl-button mdl-js-button mdl-button--fab mdl-button--colored">
+					<i class="material-icons">play_arrow</i>
+				</button>
+				<div class="mdl-tooltip" for="btnStart">
+					Start the Agent 
+				</div>
+				
+				<button id="btnStop" class="mdl-button mdl-js-button mdl-button--fab">
+					<i class="material-icons">stop</i>
+				</button>
+				<div class="mdl-tooltip" for="btnStop">
+					Stop the Agent 
+				</div>
+				
+				<p>
+				<div style='height: 32px;'></div>
+				</p>
+				
+				<p style="width:90%">
+					Direction
+					<input class="mdl-slider mdl-js-slider" type="range" id="sldrDirection" min="-10" max="10" value="0" step="0.05">					
+				</p>
+				
+				<p style="width:90%">
+					Performer
+					<input class="mdl-slider mdl-js-slider" type="range" id="sldrPerformer" min="-10" max="10" value="0" step="0.05">					
+				</p>
+				
+				<p style="width:90%">
+					Valence
+					<input class="mdl-slider mdl-js-slider" type="range" id="sldrValence" min="-10" max="10" value="0" step="0.05">					
+				</p>
+				
+				<p style="width:90%">
+					Arousal
+					<input class="mdl-slider mdl-js-slider" type="range" id="sldrArousal" min="-10" max="10" value="0" step="0.05">					
+				</p>
+				
+				
+
+			</div>
+
+			<div class="mdl-cell--1-col" style="height: 32px;"></div>
+
+			<div id="options" class="mdl-grid mdl-cell mdl-cell--4-col mdl-cell--4-col mdl-cell--4-col-tablet mdl-cell--12-col-desktop mdl-color--white mdl-shadow--4dp">
+
+
+				<!-- Server Config -->
+				<div class="title"> Options </div>
+				<div>
+					<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+						<input class="mdl-textfield__input" type="text" id="txtServerIP" value="127.0.0.1">
+						<label class="mdl-textfield__label" for="txtServerIP">Server Address</label>
+					</div>
+
+					<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+						<input class="mdl-textfield__input" type="text" id="txtServerPort" value="7072">
+						<label class="mdl-textfield__label" for="txtServerPort">Server Port</label>
+					</div>
+
+					<button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" id="btnConnect">
+  							Connect
+						</button>
+
+				</div>
+			</div>
+		</div>
+
+		<!--Activations Tab-->
+		<div id="activations" class="mdl-cell mdl-cell--bottom mdl-cell--8-col mdl-color--white mdl-shadow--4dp"> Activations </div>
+
+
+
+		<div id="notification" class="mdl-js-snackbar mdl-snackbar">
+			<div class="mdl-snackbar__text"></div>
+			<button class="mdl-snackbar__action" type="button"></button>
+		</div>
+
+</body>
+
+</html>
