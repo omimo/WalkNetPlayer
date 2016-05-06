@@ -28,6 +28,7 @@ May 2016
 	<script src="bower_components/three.js/examples/js/controls/OrbitControls.js"></script>
 	<script src="bower_components/WebHamsters/src/hamsters.min.js"></script>
 	<script src="bower_components/material-design-lite/material.min.js"></script>
+	<script src="bower_components/ccapture.js/build/CCapture.all.min.js"></script>
 
 	<script src="../jsMocapGL/dist/jsMocapGL.js"></script>
 	<script src="js/skeletonFactory.js"></script>
@@ -39,8 +40,19 @@ May 2016
 		var scene, camera, renderer,
 			lights = [],
 			characters = [];
-
-
+		
+		// Create a capturer that exports a WebM video
+		var capturer = new CCapture( { 
+			format: 'webm',
+			timeLimit: 10,
+			framerate: 33,
+			name: 'WalkNetCapture'
+		} );
+		
+		var agentOn = false;
+		
+		capturer.isRecording = false;
+		
 		$(document).ready(function() {
 			init();
 
@@ -85,15 +97,42 @@ May 2016
 			});
 
 			$('#btnStart').on('click', function(e) {
-				if (c2.webSocket.readyState == 1) {
-					c2.webSocket.send('$CMD$START$');
+				if (!agentOn) {
+					if (c2.webSocket.readyState == 1) {
+						c2.webSocket.send('$CMD$START$');
+						agentOn = true;
+						$('#btnStart')[0].innerHTML='<i class="material-icons">pause</i>';
+					}
+				} else {
+					if (c2.webSocket.readyState == 1) {
+					c2.webSocket.send('$CMD$STOP$');
+					agentOn = false;
+					$('#btnStart')[0].innerHTML='<i class="material-icons">play_arrow</i>';
 				}
+				}
+				
 			});
 
 			$('#btnStop').on('click', function(e) {
 				if (c2.webSocket.readyState == 1) {
 					c2.webSocket.send('$CMD$STOP$');
 				}
+			});
+			
+			$('#btnRecord').on('click', function(e) {
+				if (!capturer.isRecording) {
+					capturer.start();
+					$('#btnRecord')[0].innerHTML='<i class="material-icons">stop</i>';
+					capturer.isRecording = true;
+				} else {
+					capturer.stop();
+					capturer.save();
+					capturer.isRecording = false;
+					$('#btnRecord')[0].innerHTML='<i class="material-icons">fiber_manual_record</i>';
+				}
+					
+					
+				
 			});
 
 			$('#sldrDirection').on('input', sendLabels);
@@ -242,7 +281,12 @@ May 2016
 			renderer.setClearColor(0xefefef, 0.8);
 			renderer.setClearColor(0xffffff, 1);
 			document.getElementById('playerCanvas').appendChild(renderer.domElement);
+			
+			camera.aspect = $('#playerCanvas').width()/ ($('#player').height() - 251);
+			camera.updateProjectionMatrix();
 
+			renderer.setSize($('#playerCanvas').width(), $('#player').height() - 251);
+				
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
 		}
 
@@ -272,8 +316,10 @@ May 2016
 					}
 				}
 			});
-
+			
 			renderer.render(scene, camera);
+			
+			capturer.capture( renderer.domElement );
 		}
 	</script>
 
@@ -320,7 +366,7 @@ May 2016
 				<div id="controller" class="mdl-grid mdl-cell mdl-cell--3-col mdl-cell--3-col mdl-cell--3-col-tablet mdl-cell--12-col-desktop mdl-color--white mdl-shadow--4dp">
 					<div class='title'> Generation Controller </div>
 
-					<div class="control">
+					<div class="control" style="cursor:pointer">
 						<label for="modelSelector">WalkNet Model</label>
 						<div class="select">
 							<select id="modelSelector">
@@ -331,19 +377,29 @@ May 2016
 
 
 					<div id='agentButtons' class="control">
+					
 						<button id="btnStart" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored">
-					<i class="material-icons">play_arrow</i>
-					</button>
+						<i class="material-icons">play_arrow</i>
+						</button>
 						<div class="mdl-tooltip" for="btnStart">
-							Start the Agent
+							Start/pause the agent
 						</div>
 
-						<button id="btnStop" class="mdl-button mdl-js-button mdl-button--icon"">
-					<i class="material-icons">stop</i>
-				</button>
-					<div class="mdl-tooltip" for="btnStop">
-						Stop the Agent
-					</div>
+						<!--<button id="btnStop" class="mdl-button mdl-js-button mdl-button--icon"">
+							<i class="material-icons">pause</i>
+						</button>
+						<div class="mdl-tooltip" for="btnStop">
+							Pause the Agent
+						</div>-->
+												
+						
+						<button id="btnRecord"  style="margin-left2: 20px" class="mdl-button mdl-js-button mdl-button--icon"">
+							<i class="material-icons">fiber_manual_record</i>
+						</button>
+						<div class="mdl-tooltip" for="btnRecord">
+							Start/stop capturing the animation as a .webm movie
+						</div>
+					
 					</div>
 					
 				</div>
@@ -413,7 +469,7 @@ May 2016
 
 			
 
-
+		</div>
 			
 			<!-- Notification Popup -->
 			<div id="notification" class="mdl-js-snackbar mdl-snackbar">
@@ -423,22 +479,18 @@ May 2016
 
 
 			<!--Footer-->
-			<footer class="mdl-mini-footer" style="width: 100%;">
-				<div class="mdl-mini-footer__left-section">
-					<div class="mdl-logo">
-						(c) 2016 - Omid Alemi
-					</div>
-					<ul class="mdl-mini-footer__link-list">
-						<li><a href="#">Help</a></li>
-						<li><a href="#">Paper</a></li>
+			<!--<footer class="mdl-mega-footer">
+				
+				<div class="mdl-mega-footer__bottom-section">
+					<div class="mdl-logo">(c) 2016 - Omid Alemi</div>
+					<ul class="mdl-mega-footer__link-list">
+						
+						<li><a href="#">Help</a></li>	
+						<li><a href="#">Publications</a></li>						
 					</ul>
 				</div>
-				<div class="mdl-mini-footer__right-section">
-					<button class="mdl-mini-footer__social-btn"></button>
-					<button class="mdl-mini-footer__social-btn"></button>
-					<button class="mdl-mini-footer__social-btn">Github</button>
-				</div>
-			</footer>
+
+			</footer>-->
 
 </body>
 
