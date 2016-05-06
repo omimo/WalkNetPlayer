@@ -47,7 +47,7 @@ May 2016
 			animate();
 			
 			$(window).on("resize", function(e) {
-				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.aspect = $('#playerCanvas').width()/ ($('#player').height() - 251);
 				camera.updateProjectionMatrix();
 
 				renderer.setSize($('#playerCanvas').width(), $('#player').height() - 251);
@@ -298,7 +298,7 @@ May 2016
 
 		<!--Main Components-->
 
-		<div class="mdl-grid">
+		<div class="mdl-grid" style="max-width:1080px">
 			<div id="player" class="mdl-grid mdl-cell mdl-cell--9-col mdl-grid--no-spacing">
 				
 				<!-- WebGL Canvas -->
