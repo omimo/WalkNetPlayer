@@ -1,13 +1,23 @@
-#player {
+#player2 {
   display: flex;
   align-items: stretch;
   flex-direction: column;
   padding: 4px;
+  height: 50%;
+}
+
+#player {
+  align-content: flex-start;
+  align-items: flex-start;
 }
 
 #sidebar {
   align-content: flex-start;
   align-items: flex-start;
+}
+
+#activations {
+  padding: 5px;
 }
 
 #agentButtons {

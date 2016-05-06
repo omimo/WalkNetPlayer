@@ -1,17 +1,14 @@
 jointmaterial =  new THREE.MeshLambertMaterial({
 		color: 0xc57206,
 		emissive: 0x271c18,
-		side: THREE.DoubleSide,
-		// shading: THREE.FlatShading,
-		wireframe: false,
-		shininess: 90,
+		side: THREE.DoubleSide,	
+		wireframe: false,		
 	});
 
 bonematerial = new THREE.MeshPhongMaterial({
 		color: 0xbd9a6d,
 		emissive: 0x271c18,
-		side: THREE.DoubleSide,
-		// shading: THREE.FlatShading,
+		side: THREE.DoubleSide,		
 		wireframe: false
 	});
 
@@ -24,10 +21,9 @@ jointmaterial2 = new THREE.MeshPhongMaterial({
 	});
 
 bonematerial2 = new THREE.MeshPhongMaterial({
-		color: 0x552211,
-		emissive: 0x882211,
-		// emissive: 0x000000,
-		specular: 0x111111,
+		color: 0xFFAB40,
+		emissive: 0x271c18,
+		// specular: 0x111111,
 		shininess: 30,
 		side: THREE.DoubleSide
 	});
