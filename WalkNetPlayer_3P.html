@@ -30,7 +30,7 @@ May 2016
 	<script src="bower_components/material-design-lite/material.min.js"></script>
 	<!--<script src="bower_components/ccapture.js/build/CCapture.all.min.js"></script>-->
 
-	<script src="../MocapJS/dist/jsMocapGL.js"></script>
+	<script src="../MocapJS/dist/MocapJS.js"></script>
 	<script src="js/skeletonFactory.js"></script>
 	<script src="js/WalkNetChar.js"></script>
 </head>
@@ -321,6 +321,41 @@ May 2016
 		}
 	</script>
 
+
+    <script>
+        window.onload = function() {
+            var perfContainer = document.querySelector(".triP");
+            var thumb = document.querySelector(".triP .thumb");
+            
+            var bounX=perfContainer.offsetWidth-thumb.offsetWidth/2;
+            var bounY=perfContainer.offsetHeight-thumb.offsetHeight/2;
+            var ww = thumb.offsetWidth/2;
+            var hh = thumb.offsetHeight/2;
+
+            thumb.draggable="true";
+
+            thumb.ondrag = function(event) {                                                      
+                if (event.clientX > perfContainer.offsetLeft + ww && 
+                    event.clientX < perfContainer.offsetLeft + bounX) {
+                        thumb.style.left = (event.clientX - ww )+"px";
+                    }
+                        
+
+                if (event.clientY > perfContainer.offsetTop + hh  && 
+                    event.clientY < perfContainer.offsetTop + bounY) {
+                        thumb.style.top = (event.clientY-hh)+"px";
+                    }
+                        
+            };
+
+            thumb.addEventListener("dragstart", function(e) {
+                    // this.style.display = "none";                
+            }, false);
+        };
+
+        
+
+    </script>
 	<!--Header-->
 	<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
 		<header class="mdl-layout__header">
@@ -422,7 +457,11 @@ May 2016
 
 					<p style="width:90%">
 						<label for="sldrPerformer">Performer</label>
-						<input class="mdl-slider mdl-js-slider" type="range" id="sldrPerformer" min="0" max="10" value="0" step="0.01">
+						<!--<input class="mdl-slider mdl-js-slider" type="range" id="sldrPerformer" min="0" max="10" value="0" step="0.01">-->
+                        <div class="triP">
+                            <div class="thumb"></div> 
+                        </div>
+
 					</p>
 
 					<p style="width:90%">

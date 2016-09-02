@@ -110,3 +110,54 @@
 .mdl-slider__background-lower {
   background: rgba(0, 0, 0, .26) !important;
 }
+
+.oSign {
+  position: absolute;
+  text-align: center!important;
+  padding: 4px;
+  height: 16px;
+  width: 120px;
+  margin: auto;
+  display: block;
+  background-color: #fbfbfb;
+  z-index: 100;
+  font-size: 11px;
+}
+
+.oSignBot {
+  border-top-left-radius: 8px!important;
+  border-top-right-radius: 8px!important;
+  bottom: 0px;
+}
+
+.oSignTop {
+  border-bottom-left-radius: 8px!important;
+  border-bottom-right-radius: 8px!important;
+  top: 0px;
+  right:20px;
+}
+
+.oSign a {
+  color:black !important;
+}
+
+.triP {
+  height: 80px;
+  width: 80px;
+  margin: auto;
+  border: 1px black solid;
+}
+
+.triP .thumb {
+  position:absolute;
+  -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: rgb(96,125,139);
+    border: none;
+    transition: transform .18s cubic-bezier(.4,0,.2,1),border .18s cubic-bezier(.4,0,.2,1),box-shadow .18s cubic-bezier(.4,0,.2,1),background .28s cubic-bezier(.4,0,.2,1);
+    transition: transform .18s cubic-bezier(.4,0,.2,1),border .18s cubic-bezier(.4,0,.2,1),box-shadow .18s cubic-bezier(.4,0,.2,1),background .28s cubic-bezier(.4,0,.2,1),-webkit-transform .18s cubic-bezier(.4,0,.2,1);
+    cursor: pointer;
+}
