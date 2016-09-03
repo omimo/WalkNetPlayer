@@ -11,9 +11,44 @@ Created: September 2, 2016
     var thumSize = 12;
     var container;
     var h = controlWidth * (Math.sqrt(3)/2);
+    var contInput = true; 
 
-    $.fn.triSelect = function() {
-        container = this;
+    var defaults = {
+        input : function() {},        
+    };
+
+    var methods = {        
+        value : function() {              
+            t = this.children(".thumb");
+            posX = parseInt(t.css('left').substr(0,t.css('left').length-2));
+            posX = Math.max(0,-10 + posX);
+            posX = Math.min(controlWidth-thumSize/2, posX);
+            posY = Math.max(0,-10 + t.position().top - this.position().top);
+            console.log("h:"+h);
+            _top = (h - posY)/h;
+            _left = ((controlWidth-thumSize/2) - posX)/(controlWidth-thumSize/2);
+            _right = 1 - _left;  
+            console.log(posX + " , " + posY);
+            return {
+                top: _top,
+                left: _left,
+                right: _right
+            };
+          }        
+    };
+
+    $.fn.triSelect = function( methodOrOptions ) {         
+        if ( methods[methodOrOptions] ) {
+            return methods[ methodOrOptions ].apply( this, Array.prototype.slice.call( arguments, 1 ));
+        } else if ( typeof methodOrOptions === 'object' || ! methodOrOptions ) {
+            // Default to "init"
+        } else {
+            $.error( 'Method ' +  methodOrOptions + ' does not exist on jQuery.tooltip' );
+        }    
+
+        var settings = $.extend( {}, defaults, methodOrOptions );
+        var container = this;
+
         this.addClass("triP");
 
         // Drawings
@@ -66,20 +101,30 @@ Created: September 2, 2016
                 console.log(event);
                 console.log("center: "+center);
                 relY = event.clientY - container.position().top;
-                relY = Math.min(Math.max(0,relY),h-ww);
-
-                relX = event.clientX - container.position().left;
-                relX = Math.min(Math.max(-ww,relX),container.width()+ww);
-
-                console.log("relX: "+ relX);
-                console.log("relY: "+ relY);
-                console.log("clientY: "+ event.clientY + " | top: "+ container.position().top);
+                relY = Math.min(Math.max(10 + thumSize/2,relY),h+10 + thumSize/2 - ww);
 
                 triWidth = relY/(Math.sqrt(3)/2);
-                console.log("triWidth: "+triWidth);
+
+                relX = (event.clientX - container.position().left)/2 ;
                 
-                ui.position.left = Math.min(Math.max(center-triWidth/2,relX),center+triWidth/2) + 2;
-                ui.position.top = (-controlWidth+1) + relY;//Math.min(Math.max(ww,relY),h+ww)-ww;                    
+                a = Math.max((center - triWidth/2 + thumSize/2 +4 ),relX);                
+                relX = Math.min(a,(center + triWidth/2 - thumSize/2));
+
+                console.log("eventX diff: " + (event.clientX - container.position().left));
+                console.log("relX: "+ relX);                                                    
+                console.log("triWidth: "+triWidth);
+                console.log("a :" + ((controlWidth/2 - triWidth/2)));
+                console.log("b: "+ ((controlWidth/2 + triWidth/2)));                
+                
+                ui.position.left = relX;//Math.min(Math.max(center-triWidth/2,relX),center+triWidth/2) + 2;
+                ui.position.top = (-controlWidth+1) + relY - 10 - thumSize/2;//Math.min(Math.max(ww,relY),h+ww)-ww;
+                
+                if (contInput)
+                   container.trigger("input");                    
+            },
+            stop: function(event,ui) {
+                if (!contInput)
+                   container.trigger("input"); 
             }
         }); 
 
@@ -90,13 +135,17 @@ Created: September 2, 2016
             triWidth = y/(Math.sqrt(3)/2);            
             if (y < h && event.offsetX > (center - triWidth/2 + 2 - ww) &&
                 event.offsetX < (center + triWidth/2 + 2 + ww) ) {                    
-                    console.log(container.children(".thumb"));
-                    container.children(".thumb").css('left',event.offsetX);
-                    container.children(".thumb").css('top',(-controlWidth+1)+ event.offsetY);                    
+                    xx = event.offsetX+1;
+                    xx = Math.max(center - triWidth/2 + 2, xx);
+                    yy = (-controlWidth+1)+ event.offsetY-ww;
+                    container.children(".thumb").css('left',xx);
+                    container.children(".thumb").css('top',yy);
+
+                    // settings.click.call("hahaha");
+                    container.trigger("input");                    
                 }                
         });
 
         return this;
-    };
- 
+    };   
 }( jQuery ));

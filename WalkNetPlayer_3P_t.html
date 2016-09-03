@@ -327,6 +327,10 @@ May 2016
     <script>
         window.onload = function() {
             $("#perSel").triSelect();
+            $("#perSel").on("input", function(e) {
+                console.log("called");
+                console.log($("#perSel").triSelect("value"));
+            });
         };
     </script>
 	<!--Header-->
