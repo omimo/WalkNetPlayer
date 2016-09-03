@@ -28,6 +28,7 @@ May 2016
 	<script src="bower_components/three.js/examples/js/controls/OrbitControls.js"></script>
 	<script src="bower_components/WebHamsters/src/hamsters.min.js"></script>
 	<script src="bower_components/material-design-lite/material.min.js"></script>
+    <script src="bower_components/jquery-ui/jquery-ui.min.js"></script>
 	<!--<script src="bower_components/ccapture.js/build/CCapture.all.min.js"></script>-->
 
 	<script src="../MocapJS/dist/MocapJS.js"></script>
@@ -324,37 +325,72 @@ May 2016
 
     <script>
         window.onload = function() {
-            var perfContainer = document.querySelector(".triP");
-            var thumb = document.querySelector(".triP .thumb");
+            perfContainer = document.querySelector(".triP");
             
-            var bounX=perfContainer.offsetWidth-thumb.offsetWidth/2;
-            var bounY=perfContainer.offsetHeight-thumb.offsetHeight/2;
-            var ww = thumb.offsetWidth/2;
-            var hh = thumb.offsetHeight/2;
 
-            thumb.draggable="true";
+                                                        
+            var controlWidth = 80;//perfContainer.offsetWidth;
+            var h = controlWidth * (Math.sqrt(3)/2);
 
-            thumb.ondrag = function(event) {                                                      
-                if (event.clientX > perfContainer.offsetLeft + ww && 
-                    event.clientX < perfContainer.offsetLeft + bounX) {
-                        thumb.style.left = (event.clientX - ww )+"px";
-                    }
-                        
+            $(".triP")[0].appendChild(document.createElementNS("http://www.w3.org/2000/svg","svg"));
+            
+            var triangle = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+            triangle.setAttributeNS(null,"points","6,"+h+" "+controlWidth/2+",6 "+controlWidth+","+h+" 6,"+h);
+            triangle.setAttributeNS(null,"style","fill:none;stroke:black;stroke-width:1");
+            $(".triP svg").append(triangle);
+            
+            var c1 = document.createElementNS("http://www.w3.org/2000/svg","circle");
+            c1.setAttributeNS(null,"cx",6);
+            c1.setAttributeNS(null,"cy",h);
+            c1.setAttributeNS(null,"r",6);
+            c1.setAttributeNS(null,"style","stroke:black;stroke-width:1;fill:white");
+            $(".triP svg").append(c1);
 
-                if (event.clientY > perfContainer.offsetTop + hh  && 
-                    event.clientY < perfContainer.offsetTop + bounY) {
-                        thumb.style.top = (event.clientY-hh)+"px";
-                    }
-                        
-            };
+            var c2 = document.createElementNS("http://www.w3.org/2000/svg","circle");
+            c2.setAttributeNS(null,"cx",controlWidth/2);
+            c2.setAttributeNS(null,"cy",6);
+            c2.setAttributeNS(null,"r",6);
+            c2.setAttributeNS(null,"style","stroke:black;stroke-width:1;fill:white");
+            $(".triP svg").append(c2);
 
-            thumb.addEventListener("dragstart", function(e) {
-                    // this.style.display = "none";                
-            }, false);
+            var c3 = document.createElementNS("http://www.w3.org/2000/svg","circle");
+            c3.setAttributeNS(null,"cx",controlWidth);
+            c3.setAttributeNS(null,"cy",h);
+            c3.setAttributeNS(null,"r",6);
+            c3.setAttributeNS(null,"style","stroke:black;stroke-width:1;fill:white");
+            $(".triP svg").append(c3);
+
+            var thumb = document.createElement("div");
+            thumb.className = "thumb";
+            $(".triP")[0].appendChild(thumb);            
+
+            ww = thumb.offsetWidth/2;
+            hh = thumb.offsetHeight/2;
+
+            thumb.style.left = (perfContainer.offsetWidth/2 - thumb.clientWidth/2)+"px";
+            thumb.style.top = "-80px";
+
+            $( ".triP .thumb" ).draggable({
+                containment: "parent",
+                drag: function(event, ui){
+                    tt = 1.73205080757;
+                    center = perfContainer.offsetWidth/2 - thumb.clientWidth/2;
+                    console.log(event);
+                    console.log("center: "+center);
+                    relY = event.clientY - perfContainer.offsetTop;
+                    relY = Math.min(Math.max(ww,relY),perfContainer.offsetHeight+ww);
+
+                    relX = event.clientX - perfContainer.offsetLeft;
+                    relX = Math.min(Math.max(ww,relX),perfContainer.offsetWidth+ww);
+
+                    console.log("relX: "+ relX);
+                    triWidth = ((relY * 2)/tt)/4;
+                    console.log("triWidth: "+triWidth);
+                    
+                    ui.position.left = Math.min(Math.max(center-triWidth,relX),center+triWidth+ww)-ww;                    
+                }
+            });         
         };
-
-        
-
     </script>
 	<!--Header-->
 	<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
@@ -459,7 +495,7 @@ May 2016
 						<label for="sldrPerformer">Performer</label>
 						<!--<input class="mdl-slider mdl-js-slider" type="range" id="sldrPerformer" min="0" max="10" value="0" step="0.01">-->
                         <div class="triP">
-                            <div class="thumb"></div> 
+                             
                         </div>
 
 					</p>
