@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<!-- WalkNet WebGL Interface - V 0.1 
+By Omid Alemi
+May 2016
+ -->
+<html lang="en">
+
+<head>
+	<title>WalkNet Player</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	
+	<!--<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">-->
+	<!--<link rel="stylesheet" href="https://code.getmdl.io/1.1.3/material.light_blue-blue.min.css" />-->
+	<!--<link rel="stylesheet" href="https://code.getmdl.io/1.1.3/material.amber-orange.min.css" />	-->
+	<!--<link rel="stylesheet" href="https://code.getmdl.io/1.1.3/material.brown-orange.min.css" />-->
+	<!--<link rel="stylesheet" href="https://code.getmdl.io/1.1.3/material.cyan-indigo.min.css" />-->
+	<!--<link rel="stylesheet" href="https://code.getmdl.io/1.1.3/material.blue_grey-orange.min.css" />-->
+	
+	<!--<link rel="stylesheet" href="bower_components/material-design-lite/material.min.css">-->
+	<link rel="stylesheet" href="bower_components/material-design-icons/iconfont/material-icons.css">
+	<link rel="stylesheet" href="style/material.blue_grey-orange.min.css"/>
+	<link rel="stylesheet" href="style/main.css" />
+
+	<script src="bower_components/mathjs/dist/math.min.js"></script>
+	<script src="bower_components/jquery/dist/jquery.min.js"></script>
+	<script src="bower_components/three.js/build/three.min.js"></script>
+	<script src="bower_components/three.js/examples/js/controls/OrbitControls.js"></script>
+	<script src="bower_components/WebHamsters/src/hamsters.min.js"></script>
+	<script src="bower_components/material-design-lite/material.min.js"></script>
+    <script src="bower_components/jquery-ui/jquery-ui.min.js"></script>
+	<!--<script src="bower_components/ccapture.js/build/CCapture.all.min.js"></script>-->
+
+	<script src="../MocapJS/dist/MocapJS.js"></script>
+	<script src="js/skeletonFactory.js"></script>
+	<script src="js/WalkNetChar.js"></script>
+    <script src="js/triSelect.js"></script>
+</head>
+
+<body>
+	<script>
+		var scene, camera, renderer,
+			lights = [],
+			characters = [];
+		
+		// Create a capturer that exports a WebM video
+		// var capturer = new CCapture( { 
+		// 	format: 'webm',
+		// 	timeLimit: 10,
+		// 	framerate: 33,
+		// 	name: 'WalkNetCapture'
+		// } );
+		
+		var agentOn = false;
+		
+		// capturer.isRecording = false;
+		
+		$(document).ready(function() {
+			init();
+
+			animate();
+			
+			$(window).on("resize", function(e) {
+				camera.aspect = $('#playerCanvas').width()/ ($('#player').height() - 251);
+				camera.updateProjectionMatrix();
+
+				renderer.setSize($('#playerCanvas').width(), $('#player').height() - 251);
+			});
+
+			$('#btnConnect').on('click', function(e) {
+
+				var url = 'ws://' + $('#txtServerIP')[0].value + ':' + $('#txtServerPort')[0].value;
+				console.log('connecting to '+ url);
+				
+				c2.loadFromStream(url, function() { //TODO: Fix the callback in the lib
+					scene.add(c2.skeleton);
+
+					var data = {
+						message: 'Connected to ' + url
+					};
+					document.querySelector('#notification').MaterialSnackbar.showSnackbar(data);
+										
+					
+					c2.webSocket.onmessageActs = function(event) {
+					
+						// c2.webSocket.onmessage_org(event);
+					
+						var messageLines = event.data.split('\n');
+
+						if (messageLines.length < 1)
+							return;
+						if (messageLines[0].startsWith("$ACTS$")) {
+							
+							updateActs(messageLines);
+						}
+				};
+	
+				});
+			});
+
+			$('#btnStart').on('click', function(e) {
+				if (!agentOn) {
+					if (c2.webSocket.readyState == 1) {
+						c2.webSocket.send('$CMD$START$');
+						agentOn = true;
+						$('#btnStart')[0].innerHTML='<i class="material-icons">pause</i>';
+					}
+				} else {
+					if (c2.webSocket.readyState == 1) {
+					c2.webSocket.send('$CMD$STOP$');
+					agentOn = false;
+					$('#btnStart')[0].innerHTML='<i class="material-icons">play_arrow</i>';
+				}
+				}
+				
+			});
+
+			$('#btnStop').on('click', function(e) {
+				if (c2.webSocket.readyState == 1) {
+					c2.webSocket.send('$CMD$STOP$');
+				}
+			});
+			
+			$('#btnRecord').on('click', function(e) {
+				if (!capturer.isRecording) {
+					capturer.start();
+					$('#btnRecord')[0].innerHTML='<i class="material-icons">stop</i>';
+					capturer.isRecording = true;
+				} else {
+					capturer.stop();
+					capturer.save();
+					capturer.isRecording = false;
+					$('#btnRecord')[0].innerHTML='<i class="material-icons">fiber_manual_record</i>';
+				}
+					
+					
+				
+			});
+
+			$('#sldrDirection').on('input', sendLabels);
+			$('#sldrPerformer').on('input', sendLabels);
+			$('#sldrValence').on('input', sendLabels);
+			$('#sldrArousal').on('input', sendLabels);
+			
+			$('#sldrDirection').on('mouseup', function(event) {
+				$('#sldrDirection')[0].MaterialSlider.change(0);
+				sendLabels();
+			});
+		});
+		var aa = [];
+		
+		function updateActs(m) {
+			//console.log(m);
+			var maxActLength = 600;
+
+			for (f = 1; f < m.length; f++) {
+				var parts = m[f].trim().split(" ");
+				for (var j = 0; j < parts.length; j++)
+					parts[j] = +(parts[j]) * 255 ;									
+				
+				aa.push(parts);
+				
+				if(aa.length > maxActLength)
+					aa.shift();
+			}
+			
+			canvas = document.getElementById('activCanvas');
+			var ctx = canvas.getContext("2d");			
+			var imageData = ctx.createImageData(aa.length,aa[0].length);
+			var data = imageData.data;
+			
+			for (f = aa.length -1; f >=0 ; f--) {
+				p = aa.length - f - 1;
+			
+				for (var j = 0; j < aa[0].length; j++){				
+					data[((j*(imageData.width*4)) + (f*4)) + 0] = 96;
+					data[((j*(imageData.width*4)) + (f*4)) + 1] = 125;
+					data[((j*(imageData.width*4)) + (f*4)) + 2] = 139;
+					data[((j*(imageData.width*4)) + (f*4)) + 3] = aa[p][j];
+				}
+				
+				// rgb(96,125,139)
+			}
+			
+			ctx.putImageData(imageData, 0, 0);				
+		}
+		
+		function sendLabels() {
+			var p = [];
+			p.directionL = (parseInt($('#sldrDirection')[0].value) + 10) / 20;
+			p.directionR = 1 - p.directionL;
+			p.per1 = parseInt($('#sldrPerformer')[0].value) / 10;
+			p.per2 = 1 - p.per1;
+			p.valence = parseInt($('#sldrValence')[0].value) / 10;
+			p.arousal = parseInt($('#sldrArousal')[0].value) / 10;
+
+			// console.log(p);
+
+			paramMsg = '$PAR$';
+			paramMsg += p.directionR + '$';
+			paramMsg += p.directionL + '$';
+			paramMsg += p.per1 + '$';
+			paramMsg += p.per2 + '$';
+			paramMsg += p.valence + '$';
+			paramMsg += p.arousal + '$';
+
+			if (c2.webSocket.readyState == 1) {
+				c2.webSocket.send(paramMsg);
+			}
+		}
+
+
+		function set_the_scene() {
+			// Lights
+
+			lights[0] = new THREE.PointLight(0xffffff, 1, 0);
+			lights[0].position.set(0, 100, 0);
+
+			scene.add(lights[0]);
+
+			// Grid
+			var size = 4000,
+				step = 20;
+
+			var geometry = new THREE.PlaneGeometry(size * 2, size * 2);
+			var material = new THREE.MeshPhongMaterial({
+				color: 0x444444,
+				emissive: 0x000000,
+				specular: 0x111111,
+				side: THREE.DoubleSide,
+				transparent: true,
+				opacity: 0.9
+			});
+			var plane = new THREE.Mesh(geometry, material);
+			plane.position.set(0, 0, 0);
+			plane.rotation.set(math.pi / 2, 0, 0);
+			scene.add(plane);
+
+			var geometry = new THREE.Geometry();
+			var material = new THREE.LineBasicMaterial({
+				color: 0x555555,
+				linewidth: 1.2
+			});
+			for (var i = -size; i <= size; i += step) {
+				geometry.vertices.push(new THREE.Vector3(-size, -0.04, i));
+				geometry.vertices.push(new THREE.Vector3(size, -0.04, i));
+				geometry.vertices.push(new THREE.Vector3(i, -0.04, -size));
+				geometry.vertices.push(new THREE.Vector3(i, -0.04, size));
+			}
+
+			var line = new THREE.LineSegments(geometry, material);
+			scene.add(line);
+
+		}
+
+		function init() {
+			scene = new THREE.Scene();
+			// asp = window.innerWidth / window.innerHeight;
+			asp = $('#playerCanvas').width()/($('#player').height() - 251);
+			camera = new THREE.PerspectiveCamera(45, asp, 10, 4000);
+			camera.position.set(0, 80, 0);
+			camera.position.z = 350;
+			scene.add(camera);
+
+			set_the_scene();
+
+			c2 = new WalkNetChar("Gholi", jointmaterial, bonematerial2, makeJointGeometry_Dode, makeBoneGeometry_Cylinder2);
+			c2.skelScale = 1.5;
+			c2.setOriginPosition(0, 38, 0); //TODO: Fix the height
+
+			characters.push(c2);
+
+
+			renderer = new THREE.WebGLRenderer({
+				antialias: true
+			});
+			renderer.setSize($('#playerCanvas').width(),$('#player').height() - 251);
+			renderer.gammaInput = true;
+			renderer.gammaOutput = true;
+			renderer.setPixelRatio(window.devicePixelRatio);
+
+
+			renderer.setClearColor(0xefefef, 0.8);
+			renderer.setClearColor(0xffffff, 1);
+			document.getElementById('playerCanvas').appendChild(renderer.domElement);
+			
+			camera.aspect = $('#playerCanvas').width()/ ($('#player').height() - 251);
+			camera.updateProjectionMatrix();
+
+			renderer.setSize($('#playerCanvas').width(), $('#player').height() - 251);
+				
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+		}
+
+		function animate() {
+			requestAnimationFrame(animate);
+
+			characters.forEach(function(c) {
+				if (1 && c.ready && c.playing) {
+					
+						c.animIndex = c.animOffset + Math.floor((Date.now() - c.animStartTimeRef) / c.frameTime / 1000);
+
+						if (c.animIndex >= c.frameCount) {
+							c.playing = false;
+							console.log("Stopped");
+						}
+						c.animFrame(c.animIndex);
+
+						cx = c.jointMeshes[0].matrixWorld.elements[12];
+						cy = c.jointMeshes[0].matrixWorld.elements[13];
+						cz = c.jointMeshes[0].matrixWorld.elements[14];
+
+						camera.position.set(cx, cy + 20, cz + 200);
+						camera.lookAt(cx, cy - 120, cz - 20);
+
+						lights[0].position.set(cx, cy + 200, cz);
+					}			
+			});
+			
+			renderer.render(scene, camera);
+			
+			//capturer.capture( renderer.domElement );
+		}
+	</script>
+
+
+    <script>
+        window.onload = function() {
+            $("#perSel").triSelect();
+        };
+    </script>
+	<!--Header-->
+	<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+		<header class="mdl-layout__header">
+			<div class="mdl-layout__header-row">
+				<!-- Title -->
+				<span class="mdl-layout-title">WalkNet Player</span>
+				<!-- Add spacer, to align navigation to the right -->
+				<div class="mdl-layout-spacer"></div>
+				<!-- Navigation. We hide it in small screens. -->
+				<!--<nav class="mdl-navigation mdl-layout--large-screen-only">
+        <a class="mdl-navigation__link" href="">Link</a>
+        <a class="mdl-navigation__link" href="">Link</a>
+        <a class="mdl-navigation__link" href="">Link</a>
+        <a class="mdl-navigation__link" href="">Link</a>
+      </nav>-->
+			</div>
+		</header>
+
+
+		<!--Main Components-->
+
+		<div class="mdl-grid" style="max-width:1080px">
+			<div id="player" class="mdl-grid mdl-cell mdl-cell--9-col mdl-grid--no-spacing">
+				
+				<!-- WebGL Canvas -->
+				<div id="playerCanvas" class="mdl-cell mdl-cell--9-col mdl-cell--12-col-desktop mdl-color--white mdl-shadow--4dp"></div>
+				
+				<div class="mdl-cell--1-col" style="height: 15px;"></div>
+				
+				<!--Activations Tab-->
+				<div id="activations" class="mdl-cell mdl-cell--bottom2 mdl-cell--12-col-desktop mdl-cell--9-col mdl-color--white mdl-shadow--4dp"> 
+
+					<canvas id="activCanvas" style="width: 98%; height: 200px;"></canvas> 
+				
+				</div>
+			</div>
+
+			<div id="sidebar" class="mdl-grid mdl-cell mdl-cell--3-col mdl-grid--no-spacing">
+
+				<!--Generation Controller-->
+				<div id="controller" class="mdl-grid mdl-cell mdl-cell--3-col mdl-cell--3-col mdl-cell--3-col-tablet mdl-cell--12-col-desktop mdl-color--white mdl-shadow--4dp">
+					<div class='title'> Generation Controller </div>
+
+					<div class="control" style="cursor:pointer">
+						<label for="modelSelector">WalkNet Model</label>
+						<div class="select">
+							<select id="modelSelector">
+								<option value="walknet1">WalkNet-VAPRL-81</option>       
+							</select>
+						</div>
+					</div>
+
+
+					<div id='agentButtons' class="control">
+					
+						<button id="btnStart" class="mdl-button mdl-js-button mdl-button--fab mdl-button--mini-fab mdl-button--colored">
+						<i class="material-icons">play_arrow</i>
+						</button>
+						<div class="mdl-tooltip" for="btnStart">
+							Start/pause the agent
+						</div>
+
+						<!--<button id="btnStop" class="mdl-button mdl-js-button mdl-button--icon"">
+							<i class="material-icons">pause</i>
+						</button>
+						<div class="mdl-tooltip" for="btnStop">
+							Pause the Agent
+						</div>-->
+												
+						
+						<button id="btnRecord"  style="margin-left2: 20px" class="mdl-button mdl-js-button mdl-button--icon"">
+							<i class="material-icons">fiber_manual_record</i>
+						</button>
+						<div class="mdl-tooltip" for="btnRecord">
+							Start/stop capturing the animation as a .webm movie
+						</div>
+					
+					</div>
+					
+				</div>
+				
+				<div class="mdl-cell--1-col" style="height: 15px;"></div>
+
+				<!--Agent Parameters-->
+				<div id="agentParam" class="mdl-grid mdl-cell mdl-cell--3-col mdl-cell--3-col mdl-cell--3-col-tablet mdl-cell--12-col-desktop mdl-color--white mdl-shadow--4dp">
+
+					<div class='title'> Agent Parameters </div>
+
+					
+					<p>
+						<div style='height: 32px;'></div>
+					</p>
+
+					<p style="width:90%">
+						
+						<label for="sldrDirection">Direction</label>
+						<input class="mdl-slider mdl-js-slider" type="range" id="sldrDirection" min="-6" max="6" value="0" step="0.005">
+					</p>
+
+					<p style="width:90%">
+						<label for="sldrPerformer">Performer</label>
+						<!--<input class="mdl-slider mdl-js-slider" type="range" id="sldrPerformer" min="0" max="10" value="0" step="0.01">-->
+                        <div id="perSel">
+                             
+                        </div>
+
+					</p>
+
+					<p style="width:90%">
+						<label for="sldrValence">Valence</label>
+						<input class="mdl-slider mdl-js-slider" type="range" id="sldrValence" min="5" max="35" value="20" step="0.01">
+					</p>
+
+					<p style="width:90%">
+						<label for="sldrArousal">Arousal</label>
+						<input class="mdl-slider mdl-js-slider" type="range" id="sldrArousal" min="5" max="35" value="20" step="0.01">
+					</p>
+
+
+
+				</div>
+
+				<div class="mdl-cell--1-col" style="height: 15px;"></div>
+
+				<div id="options" class="mdl-grid mdl-cell mdl-cell--3-col mdl-cell--3-col mdl-cell--3-col-tablet mdl-cell--12-col-desktop mdl-color--white mdl-shadow--4dp">
+
+
+					<!-- Server Config -->
+					<div class="title"> Options </div>
+					<div style="width:90%;">
+						<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+							<input class="mdl-textfield__input" type="text" id="txtServerIP" value="127.0.0.1">
+							<label class="mdl-textfield__label" for="txtServerIP">Server Address</label>
+						</div>
+
+						<div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+							<input class="mdl-textfield__input" type="text" id="txtServerPort" value="7072">
+							<label class="mdl-textfield__label" for="txtServerPort">Server Port</label>
+						</div>
+
+						<button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored" id="btnConnect">
+  							Connect
+						</button>
+
+					</div>
+				</div>
+			</div>
+
+			
+
+		</div>
+			
+			<!-- Notification Popup -->
+			<div id="notification" class="mdl-js-snackbar mdl-snackbar">
+				<div class="mdl-snackbar__text"></div>
+				<button class="mdl-snackbar__action" type="button"></button>
+			</div>
+
+
+			<!--Footer-->	
+			<div class="oSign oSignTop">
+				(c) 2016 - <a href="http://omid.al">Omid Alemi</a>			
+			</div>
+
+
+</body>
+
+</html>
