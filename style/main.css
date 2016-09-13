@@ -30,6 +30,10 @@
   width: 140px;
 }
 
+#controller {
+  height: 270px;
+}
+
 .title {
   margin-bottom: 10px;
   width: 100%;
@@ -119,7 +123,7 @@
   width: 120px;
   margin: auto;
   display: block;
-  background-color: #fbfbfb;
+  background-color: #ffffff;
   z-index: 100;
   font-size: 11px;
 }
@@ -142,17 +146,17 @@
 }
 
 .triP {
-  height: 100px;
-  width: 100px;
+  /*height: 100px;*/
+  /*width: 100px;*/
   margin: auto;
   /*border: 1px black solid;*/
 }
 
 .triP svg {
-  width: 90px;
-  height: 90px;
-  left: 10px;
-  top: 10px;
+  /*width: 90px;*/
+  /*height: 90px;*/
+  /*left: 10px;*/
+  /*top: 10px;*/
   position: relative;
   cursor: pointer;
 }
