@@ -26,33 +26,37 @@ Created: September 2, 2016
             t = this.children(".thumb");        
 
             posX = parseInt(t.css('left').substr(0,t.css('left').length-2));
-            posX = Math.max(0,-10 + posX);
-            posX = Math.min(sideWidth, posX);
-
-            posY = Math.abs(controlWidth + parseInt(t.css('top').substr(0,t.css('top').length-2)));
+            posX = Math.max(0, + posX);
+            posX = Math.min(sideWidth-thumSize/2, posX);
+            posXL = sideWidth-posX - thumSize/2;
+            
+            // relY = t.position().top - container.position().top;
+                
+            posY = Math.abs(-thumSize/2 + sideWidth + parseInt(t.css('top').substr(0,t.css('top').length-2)));
             posY = Math.max(0,posY);        
             posY = Math.min(triHeight,posY);
   
-            // console.log('>>x '+ posX);
-            // console.log('>>y '+ posY);
+            // console.log('>> X '+ posX);
+            // console.log('>> XL '+ posXL);
+            
 
-            topDist = Math.round(triHeight) - posY;
-            rightDist = Math.sqrt(Math.max(0,Math.pow(posX,2) - Math.pow(topDist,2)));
-            leftDist = Math.sqrt(Math.max(0,Math.pow(sideWidth-posX,2) - Math.pow(topDist,2)));
+            topDist = (-thumSize*2 + sideWidth -1) - posY;
+            rightDist = Math.round(Math.sqrt(Math.max(0,Math.pow(posX,2) - Math.pow(topDist,2))));
+            leftDist = Math.round(Math.sqrt(Math.max(0,Math.pow(posXL,2) - Math.pow(topDist,2))));
 
-            // console.log('triHeight: '+triHeight);
+            // console.log('triHeight: '+sideWidth);
             // console.log('topDist: '+topDist);
             // console.log('leftDist: '+leftDist);
             // console.log('rightDist: '+rightDist);
 
-            _top = topDist/Math.round(triHeight);            
-            _left = leftDist/Math.round(triHeight);
-            _right = rightDist/Math.round(triHeight);
+            _top = topDist/(-thumSize*2 + sideWidth -1);            
+            _left = leftDist/(sideWidth-thumSize/2);
+            _right = rightDist/(sideWidth-thumSize/2);
                     
             return {
                 top: Math.min(Math.max(_top,0),1),
                 left: Math.min(Math.max(_left,0),1),
-                right: Math.min(Math.max(_right,0),1)
+                right: _right//Math.min(Math.max(_right,0),1)
             };
           }       
     };
@@ -120,18 +124,21 @@ Created: September 2, 2016
         this.children(".thumb" ).draggable({
             containment: "parent",
             drag: function(event, ui){            
-                // nothing here anymore            
+                var $this = $(this);
+                $this.addClass('selected');   
             },
             stop: function(event,ui) {
                 var $this = $(this);
                 
+                $this.removeClass('selected');
+
                 posX = parseInt($this.css('left').substr(0,$this.css('left').length-2));
                 relY = $this.position().top - container.position().top;                
                 triWidth = relY/(Math.sqrt(3)/2); 
                 if (posX < (center - triWidth/2 - thumSize/2  +1 )) { 
-                        $this.css('left', center - triWidth/2 - thumSize/2+2);                                           
-                } else if (posX > (center + triWidth/2 + 4 ) ) { 
-                        $this.css('left', center + triWidth/2 - thumSize/2+1);                      
+                        $this.css('left', center - triWidth/2 - thumSize/2+1);                                           
+                } else if (posX > (center + triWidth/2 - 3 ) ) { 
+                        $this.css('left', center + triWidth/2 - thumSize/2+5);                      
                 }
 
                 posY = -parseInt($this.css('top').substr(0,$this.css('top').length-2));
@@ -140,7 +147,7 @@ Created: September 2, 2016
                 else if (posY <= thumSize)
                      $this.css('top',-thumSize-1);
 
-                if (!contInput)
+                // if (!contInput)
                    container.trigger("input"); 
             }
         }); 
